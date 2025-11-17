@@ -82,6 +82,231 @@ paths:
           description: No Content
         '401':
           description: Unauthorized
+  /api/games:
+    post:
+      operationId: games_create
+      description: Create a new game as the authenticated member (X player)
+      tags:
+      - games
+      security:
+      - TokenAuth: []
+      responses:
+        '201':
+          description: Game created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Game'
+        '401':
+          description: Unauthorized
+  /api/games/open:
+    get:
+      operationId: games_open_list
+      description: List open games available for joining
+      tags:
+      - games
+      responses:
+        '200':
+          description: List of open games
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GameList'
+  /api/games/{id}:
+    get:
+      operationId: games_detail
+      description: Get game details (only participants or open games)
+      tags:
+      - games
+      security:
+      - TokenAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: Game details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Game'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/games/{id}/join:
+    post:
+      operationId: games_join
+      description: Join an open game as O player
+      tags:
+      - games
+      security:
+      - TokenAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: Joined game
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Game'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/games/{id}/move:
+    post:
+      operationId: games_move
+      description: Make a move in a game you participate in
+      tags:
+      - games
+      security:
+      - TokenAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GameMoveRequest'
+      responses:
+        '200':
+          description: Updated game state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Game'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/games/{id}/close:
+    post:
+      operationId: games_close
+      description: Close a game (only creator; allowed for open or finished games)
+      tags:
+      - games
+      security:
+      - TokenAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: Closed game
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Game'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/games/{id}/rematch:
+    post:
+      operationId: games_rematch
+      description: Create a new game as a rematch with swapped symbols
+      tags:
+      - games
+      security:
+      - TokenAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+      responses:
+        '201':
+          description: New game created for rematch
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Game'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 components:
   schemas:
     Message:
@@ -171,6 +396,113 @@ components:
       properties:
         detail:
           type: string
+    Game:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        creator:
+          type: integer
+          nullable: false
+        opponent:
+          type: integer
+          nullable: true
+        x_player:
+          type: integer
+          nullable: true
+        o_player:
+          type: integer
+          nullable: true
+        status:
+          type: string
+          enum: [open, in_progress, finished, closed]
+        board:
+          type: array
+          minItems: 9
+          maxItems: 9
+          items:
+            type: string
+            enum: ["", "X", "O"]
+        next_turn:
+          type: string
+          nullable: true
+          enum: [X, O]
+        result:
+          type: string
+          nullable: true
+          enum: [x_win, o_win, draw]
+        moves:
+          type: array
+          items:
+            type: object
+            properties:
+              position:
+                type: integer
+                minimum: 0
+                maximum: 8
+              symbol:
+                type: string
+                enum: [X, O]
+              member_id:
+                type: integer
+              timestamp:
+                type: string
+                format: date-time
+        started_at:
+          type: string
+          format: date-time
+          nullable: true
+        finished_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        rating_processed:
+          type: boolean
+        creator_username:
+          type: string
+          nullable: true
+          readOnly: true
+        opponent_username:
+          type: string
+          nullable: true
+          readOnly: true
+        x_player_username:
+          type: string
+          nullable: true
+          readOnly: true
+        o_player_username:
+          type: string
+          nullable: true
+          readOnly: true
+      required:
+      - id
+      - creator
+      - status
+      - board
+      - moves
+      - created_at
+      - updated_at
+      - rating_processed
+    GameMoveRequest:
+      type: object
+      properties:
+        position:
+          type: integer
+          minimum: 0
+          maximum: 8
+      required:
+      - position
+    GameList:
+      type: array
+      items:
+        $ref: '#/components/schemas/Game'
   securitySchemes:
     TokenAuth:
       type: apiKey
