@@ -8,15 +8,15 @@ const Layout = () => {
 
   const isAuthed = Boolean(token);
 
-  const handleLogout = useCallback(() => {
-    logout();
+  const handleLogout = useCallback(async () => {
+    await logout();
     navigate('/login');
   }, [logout, navigate]);
 
   const getLinkClass = ({ isActive }) => (isActive ? 'nav-link active' : 'nav-link');
 
   return (
-    <div className="app-shell">
+    <div className="app-shell" data-easytag="id0-src/components/Layout/index.jsx">
       <header className="app-header">
         <div className="header-inner">
           <div className="brand" onClick={() => navigate('/')}>Крестики-нолики</div>

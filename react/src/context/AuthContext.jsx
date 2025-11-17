@@ -1,5 +1,5 @@
 import React, { createContext, useCallback, useEffect, useMemo, useState } from 'react';
-import { login as apiLogin } from '../api/auth.jsx';
+import { login as apiLogin, logout as apiLogout } from '../api/auth.jsx';
 import { getMe } from '../api/me.jsx';
 
 export const AuthContext = createContext({
@@ -59,10 +59,19 @@ export function AuthProvider({ children }) {
     return { token: newToken, me: user };
   }, [loadMe]);
 
-  const logout = useCallback(() => {
-    setToken(null);
-    setMe(null);
-    safeSetToken(null);
+  const logout = useCallback(async () => {
+    const hasToken = Boolean(safeGetToken());
+    try {
+      if (hasToken) {
+        await apiLogout();
+      }
+    } catch (e) {
+      // ignore API errors during logout
+    } finally {
+      setToken(null);
+      setMe(null);
+      safeSetToken(null);
+    }
   }, []);
 
   useEffect(() => {
