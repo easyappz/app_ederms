@@ -1,28 +1,17 @@
-import React, { useCallback, useMemo, useState, useEffect } from 'react';
+import React, { useCallback } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext.jsx';
 
 const Layout = () => {
   const navigate = useNavigate();
-  const [authTick, setAuthTick] = useState(0);
+  const { token, me, logout } = useAuth();
 
-  const isAuthed = useMemo(() => Boolean(localStorage.getItem('access')), [authTick]);
+  const isAuthed = Boolean(token);
 
   const handleLogout = useCallback(() => {
-    try {
-      localStorage.removeItem('access');
-      localStorage.removeItem('refresh');
-    } catch (e) {
-      // no-op
-    }
-    setAuthTick((v) => v + 1);
+    logout();
     navigate('/login');
-  }, [navigate]);
-
-  useEffect(() => {
-    const onStorage = () => setAuthTick((v) => v + 1);
-    window.addEventListener('storage', onStorage);
-    return () => window.removeEventListener('storage', onStorage);
-  }, []);
+  }, [logout, navigate]);
 
   const getLinkClass = ({ isActive }) => (isActive ? 'nav-link active' : 'nav-link');
 
@@ -41,7 +30,10 @@ const Layout = () => {
             {!isAuthed ? (
               <NavLink to="/login" className="btn-login">Войти</NavLink>
             ) : (
-              <button type="button" className="btn-logout" onClick={handleLogout}>Выйти</button>
+              <>
+                <span className="user-greeting">{me?.display_name || me?.username || 'Игрок'}</span>
+                <button type="button" className="btn-logout" onClick={handleLogout}>Выйти</button>
+              </>
             )}
           </div>
         </div>
