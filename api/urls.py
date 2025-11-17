@@ -4,6 +4,9 @@ from .views import (
     RegisterView,
     LoginView,
     LogoutView,
+    MeView,
+    MyGamesView,
+    LeaderboardView,
     CreateGameView,
     OpenGamesView,
     GameDetailView,
@@ -18,6 +21,11 @@ urlpatterns = [
     path("auth/register", RegisterView.as_view(), name="auth-register"),
     path("auth/login", LoginView.as_view(), name="auth-login"),
     path("auth/logout", LogoutView.as_view(), name="auth-logout"),
+
+    # Profile & stats
+    path("me", MeView.as_view(), name="me"),
+    path("my/games", MyGamesView.as_view(), name="my-games"),
+    path("leaderboard", LeaderboardView.as_view(), name="leaderboard"),
 
     # Games
     path("games", CreateGameView.as_view(), name="games-create"),

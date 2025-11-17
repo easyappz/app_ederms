@@ -1,6 +1,7 @@
 from django.utils import timezone
 from django.db import transaction
 from django.contrib.auth.models import User
+from django.db.models import Q
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -12,9 +13,12 @@ from .models import Member, Game
 from .serializers import (
     MessageSerializer,
     MemberSerializer,
+    MemberPublicSerializer,
+    MemberMeUpdateSerializer,
     RegisterSerializer,
     LoginSerializer,
     GameSerializer,
+    GameShortSerializer,
     CreateGameSerializer,
     MoveSerializer,
 )
@@ -146,6 +150,27 @@ class LogoutView(APIView):
                 # Fallback: if it's a key string
                 Token.objects.filter(key=str(token)).delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class MeView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(responses={200: MemberSerializer})
+    def get(self, request):
+        member = _member_from_request(request)
+        if member is None:
+            return Response({"detail": "Member not found for authenticated user."}, status=status.HTTP_403_FORBIDDEN)
+        return Response(MemberSerializer(member).data, status=status.HTTP_200_OK)
+
+    @extend_schema(request=MemberMeUpdateSerializer, responses={200: MemberSerializer, 400: None})
+    def patch(self, request):
+        member = _member_from_request(request)
+        if member is None:
+            return Response({"detail": "Member not found for authenticated user."}, status=status.HTTP_403_FORBIDDEN)
+        serializer = MemberMeUpdateSerializer(data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.update(member, serializer.validated_data)
+        return Response(MemberSerializer(member).data, status=status.HTTP_200_OK)
 
 
 class CreateGameView(APIView):
@@ -369,3 +394,46 @@ class RematchView(APIView):
             started_at=timezone.now(),
         )
         return Response(GameSerializer(new_game).data, status=status.HTTP_201_CREATED)
+
+
+class MyGamesView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(responses={200: GameShortSerializer(many=True)})
+    def get(self, request):
+        member = _member_from_request(request)
+        if member is None:
+            return Response({"detail": "Member not found for authenticated user."}, status=status.HTTP_403_FORBIDDEN)
+
+        # Pagination params
+        try:
+            limit = int(request.query_params.get("limit", 20))
+        except ValueError:
+            limit = 20
+        try:
+            offset = int(request.query_params.get("offset", 0))
+        except ValueError:
+            offset = 0
+        if limit < 1:
+            limit = 1
+        if limit > 100:
+            limit = 100
+        if offset < 0:
+            offset = 0
+
+        qs = (
+            Game.objects.filter(Q(creator=member) | Q(opponent=member))
+            .order_by("-created_at")
+        )
+        items = list(qs[offset: offset + limit])
+        data = GameShortSerializer(items, many=True, context={"member": member}).data
+        return Response(data, status=status.HTTP_200_OK)
+
+
+class LeaderboardView(APIView):
+    permission_classes = [AllowAny]
+
+    @extend_schema(responses={200: MemberPublicSerializer(many=True)})
+    def get(self, request):
+        top = Member.objects.all().order_by("-rating", "username")[:50]
+        return Response(MemberPublicSerializer(top, many=True).data, status=status.HTTP_200_OK)

@@ -82,6 +82,103 @@ paths:
           description: No Content
         '401':
           description: Unauthorized
+  /api/me:
+    get:
+      operationId: me_get
+      description: Get current member profile
+      tags:
+      - profile
+      security:
+      - TokenAuth: []
+      responses:
+        '200':
+          description: Current member info
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeResponse'
+        '401':
+          description: Unauthorized
+    patch:
+      operationId: me_patch
+      description: Update current member display name
+      tags:
+      - profile
+      security:
+      - TokenAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MePatchRequest'
+      responses:
+        '200':
+          description: Updated member info
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+  /api/my/games:
+    get:
+      operationId: my_games_list
+      description: List current member games (creator or opponent)
+      tags:
+      - games
+      security:
+      - TokenAuth: []
+      parameters:
+      - name: limit
+        in: query
+        description: Number of items to return (default 20, max 100)
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+      - name: offset
+        in: query
+        description: Number of items to skip (default 0)
+        required: false
+        schema:
+          type: integer
+          minimum: 0
+          default: 0
+      responses:
+        '200':
+          description: List of user's games
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/GameShort'
+        '401':
+          description: Unauthorized
+  /api/leaderboard:
+    get:
+      operationId: leaderboard_get
+      description: Get top 50 players by rating
+      tags:
+      - leaderboard
+      responses:
+        '200':
+          description: Leaderboard entries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LeaderboardEntry'
   /api/games:
     post:
       operationId: games_create
@@ -359,6 +456,17 @@ components:
       - draws
       - created_at
       - updated_at
+    MeResponse:
+      allOf:
+      - $ref: '#/components/schemas/Member'
+    MePatchRequest:
+      type: object
+      properties:
+        display_name:
+          type: string
+          maxLength: 150
+      required:
+      - display_name
     AuthResponse:
       type: object
       properties:
@@ -490,6 +598,50 @@ components:
       - created_at
       - updated_at
       - rating_processed
+    GameShort:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        status:
+          type: string
+          enum: [open, in_progress, finished, closed]
+        result:
+          type: string
+          nullable: true
+          enum: [x_win, o_win, draw]
+        created_at:
+          type: string
+          format: date-time
+        finished_at:
+          type: string
+          format: date-time
+          nullable: true
+        creator_username:
+          type: string
+          nullable: true
+          readOnly: true
+        opponent_username:
+          type: string
+          nullable: true
+          readOnly: true
+        x_player_username:
+          type: string
+          nullable: true
+          readOnly: true
+        o_player_username:
+          type: string
+          nullable: true
+          readOnly: true
+        outcome:
+          type: string
+          nullable: true
+          enum: [win, loss, draw, in_progress]
+      required:
+      - id
+      - status
+      - created_at
     GameMoveRequest:
       type: object
       properties:
@@ -503,6 +655,31 @@ components:
       type: array
       items:
         $ref: '#/components/schemas/Game'
+    LeaderboardEntry:
+      type: object
+      properties:
+        username:
+          type: string
+        display_name:
+          type: string
+        rating:
+          type: integer
+        games_played:
+          type: integer
+        wins:
+          type: integer
+        losses:
+          type: integer
+        draws:
+          type: integer
+      required:
+      - username
+      - display_name
+      - rating
+      - games_played
+      - wins
+      - losses
+      - draws
   securitySchemes:
     TokenAuth:
       type: apiKey
