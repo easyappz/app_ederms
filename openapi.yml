@@ -11,16 +11,77 @@ paths:
       tags:
       - api
       security:
-      - cookieAuth: []
-      - basicAuth: []
-      - {}
+      - TokenAuth: []
       responses:
         '200':
+          description: ''
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Message'
-          description: ''
+  /api/auth/register:
+    post:
+      operationId: auth_register
+      description: Register a new member and return token and member info
+      tags:
+      - auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '200':
+          description: Successful registration
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/auth/login:
+    post:
+      operationId: auth_login
+      description: Login and get token and member info
+      tags:
+      - auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Successful login
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/auth/logout:
+    post:
+      operationId: auth_logout
+      description: Logout by deleting the current token
+      tags:
+      - auth
+      security:
+      - TokenAuth: []
+      responses:
+        '204':
+          description: No Content
+        '401':
+          description: Unauthorized
 components:
   schemas:
     Message:
@@ -36,11 +97,82 @@ components:
       required:
       - message
       - timestamp
+    Member:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          readOnly: true
+        username:
+          type: string
+        display_name:
+          type: string
+        rating:
+          type: integer
+        games_played:
+          type: integer
+        wins:
+          type: integer
+        losses:
+          type: integer
+        draws:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+      - id
+      - username
+      - rating
+      - games_played
+      - wins
+      - losses
+      - draws
+      - created_at
+      - updated_at
+    AuthResponse:
+      type: object
+      properties:
+        token:
+          type: string
+        member:
+          $ref: '#/components/schemas/Member'
+      required:
+      - token
+      - member
+    RegisterRequest:
+      type: object
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+        display_name:
+          type: string
+      required:
+      - username
+      - password
+    LoginRequest:
+      type: object
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+      required:
+      - username
+      - password
+    Error:
+      type: object
+      properties:
+        detail:
+          type: string
   securitySchemes:
-    basicAuth:
-      type: http
-      scheme: basic
-    cookieAuth:
+    TokenAuth:
       type: apiKey
-      in: cookie
-      name: sessionid
+      in: header
+      name: Authorization
